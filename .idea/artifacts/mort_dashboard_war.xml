@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="war" name="mort-dashboard:war">
+    <output-path>$PROJECT_DIR$/target</output-path>
+    <root id="archive" name="mort-dashboard.war">
+      <element id="artifact" artifact-name="mort-dashboard:war exploded" />
+    </root>
+  </artifact>
+</component>
