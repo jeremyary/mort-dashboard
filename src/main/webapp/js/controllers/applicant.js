@@ -9,6 +9,6 @@ angular.module('app')
         $scope.propertyAddress = "100 Central Ave";
         $scope.propertyPrice = 350000;
         $scope.downPayment = 50000;
-        $scope.amortization = 3.5;
+        $scope.amortization = 5;
 
     }]);

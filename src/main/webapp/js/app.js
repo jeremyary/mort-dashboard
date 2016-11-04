@@ -7,6 +7,16 @@ var app = angular.module('app', [
     'ngSanitize'
 ]);
 
+app.constant('Constants', {
+   PROCESS_STATE: {
+       0: 'PENDING',
+       1: 'ACTIVE',
+       2: 'COMPLETED',
+       3: 'ABORTED',
+       4: 'SUSPENDED'
+   }
+});
+
 app.config(['$routeProvider',
     function ($routeProvider) {
         $routeProvider

@@ -20,6 +20,7 @@ public class EndpointApplication extends Application {
 
     private void addRestResourceClasses(final Set<Class<?>> resources) {
         resources.add(HomeController.class);
+        resources.add(BrokerController.class);
     }
 
 }

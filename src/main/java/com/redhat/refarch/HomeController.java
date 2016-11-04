@@ -2,16 +2,18 @@ package com.redhat.refarch;
 
 import org.kie.server.api.marshalling.MarshallingFormat;
 import org.kie.server.api.model.KieContainerResource;
-import org.kie.server.api.model.KieContainerResourceList;
-import org.kie.server.client.KieServicesClient;
-import org.kie.server.client.KieServicesConfiguration;
-import org.kie.server.client.KieServicesFactory;
+import org.kie.server.api.model.definition.ProcessDefinition;
+import org.kie.server.api.model.instance.ProcessInstance;
+import org.kie.server.api.model.instance.TaskSummary;
+import org.kie.server.api.model.instance.WorkItemInstance;
+import org.kie.server.client.*;
 
 import javax.enterprise.context.RequestScoped;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import java.util.LinkedList;
 import java.util.List;
 
 /***
@@ -28,23 +30,145 @@ public class HomeController {
 
     private static final MarshallingFormat FORMAT = MarshallingFormat.JSON;
 
-    private KieServicesConfiguration conf;
-    private KieServicesClient kieServicesClient;
+    @GET
+    @Path("/containers")
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<KieContainerResource> listContainers() {
+
+        List<KieContainerResource> containers = new LinkedList<>();
+        try {
+            KieServicesClient client = initClient();
+            containers = client.listContainers().getResult().getContainers();
+
+        } catch (Exception e) {
+            throw e;
+        }
+        return containers;
+    }
 
     @GET
+    @Path("/processes")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<KieContainerResource> get() {
+    public List<ProcessDefinition> listProcesses() {
 
-        conf = KieServicesFactory.newRestConfiguration(URL, USER, PASSWORD);
-        conf.setMarshallingFormat(FORMAT);
-        kieServicesClient = KieServicesFactory.newKieServicesClient(conf);
+        List<KieContainerResource> containers = new LinkedList<>();
+        List<ProcessDefinition> processDefinitions = new LinkedList<>();
 
-        KieContainerResourceList containers = kieServicesClient.listContainers().getResult();
-        if (containers != null) {
-            for (KieContainerResource kieContainerResource : containers.getContainers()) {
-                System.out.println("\t######### Found container " + kieContainerResource.getContainerId());
+        try {
+            KieServicesClient client = initClient();
+            containers = client.listContainers().getResult().getContainers();
+
+            QueryServicesClient queryClient = client.getServicesClient(QueryServicesClient.class);
+
+            for (KieContainerResource container : containers) {
+                processDefinitions.addAll(queryClient.findProcessesByContainerId(container.getContainerId(), 0, 100));
             }
+
+        } catch (Exception e) {
+            throw e;
         }
-        return containers.getContainers();
+
+        return processDefinitions;
+    }
+
+    @GET
+    @Path("/running")
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<ProcessInstance> listRunningProcesses() {
+
+        List<KieContainerResource> containers = new LinkedList<>();
+        List<ProcessInstance> processInstances = new LinkedList<>();
+
+        try {
+            KieServicesClient client = initClient();
+            containers = client.listContainers().getResult().getContainers();
+
+            QueryServicesClient queryClient = client.getServicesClient(QueryServicesClient.class);
+
+            for (KieContainerResource container : containers) {
+                processInstances.addAll(queryClient.findProcessInstancesByContainerId(container.getContainerId(),
+                        new LinkedList<>(), 0, 100));
+            }
+
+        } catch (Exception e) {
+            throw e;
+        }
+
+        return processInstances;
+    }
+
+    @GET
+    @Path("/tasks")
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<TaskSummary> listTasks() {
+
+        List<KieContainerResource> containers = new LinkedList<>();
+        List<ProcessInstance> processInstances = new LinkedList<>();
+        List<TaskSummary> tasks = new LinkedList<>();
+
+        try {
+            KieServicesClient client = initClient();
+            containers = client.listContainers().getResult().getContainers();
+
+            QueryServicesClient queryClient = client.getServicesClient(QueryServicesClient.class);
+
+            for (KieContainerResource container : containers) {
+                processInstances.addAll(queryClient.findProcessInstancesByContainerId(container.getContainerId(),
+                        new LinkedList<>(), 0, 100));
+            }
+
+            UserTaskServicesClient userTaskClient = client.getServicesClient(UserTaskServicesClient.class);
+
+            for (ProcessInstance process : processInstances) {
+
+                tasks = userTaskClient.findTasksByStatusByProcessInstanceId(process.getId(), new LinkedList<>(), 0, 100);
+            }
+
+        } catch (Exception e) {
+            throw e;
+        }
+
+        return tasks;
+    }
+
+    @GET
+    @Path("/workitems")
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<WorkItemInstance> listWorkItems() {
+
+        List<KieContainerResource> containers = new LinkedList<>();
+        List<ProcessInstance> processInstances = new LinkedList<>();
+        List<WorkItemInstance> tasks = new LinkedList<>();
+
+        try {
+            KieServicesClient client = initClient();
+            containers = client.listContainers().getResult().getContainers();
+
+            QueryServicesClient queryClient = client.getServicesClient(QueryServicesClient.class);
+
+            for (KieContainerResource container : containers) {
+                processInstances.addAll(queryClient.findProcessInstancesByContainerId(container.getContainerId(),
+                        new LinkedList<>(), 0, 100));
+            }
+
+            ProcessServicesClient processServicesClient = client.getServicesClient(ProcessServicesClient.class);
+
+            for (ProcessInstance process : processInstances) {
+
+                tasks = processServicesClient.getWorkItemByProcessInstance(process.getContainerId(), process.getId());
+            }
+
+        } catch (Exception e) {
+            throw e;
+        }
+
+        return tasks;
+    }
+
+    private KieServicesClient initClient() {
+
+        KieServicesConfiguration conf = KieServicesFactory.newRestConfiguration(URL, USER, PASSWORD);
+        conf.setMarshallingFormat(FORMAT);
+        return KieServicesFactory.newKieServicesClient(conf);
     }
 }
